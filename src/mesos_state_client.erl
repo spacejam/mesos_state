@@ -36,6 +36,50 @@ maybe_enable_ssl(Options) ->
       Options
   end.
 
+maybe_use_token(Headers) ->
+  case try_token_from_file() of
+    undefined ->
+      maybe_use_env_token(Headers);
+    {ok, Token} ->
+      [{"Authorization", Token}|Headers]
+  end.
+
+maybe_use_env_token(Headers) ->
+  case application:get_env(?APP, token) of
+    undefined ->
+      Headers;
+    {ok, Token} ->
+      [{"Authorization", Token}|Headers]
+  end.
+
+try_token_from_file() ->
+  case application:get_env(?APP, ssl_token_file) of
+    undefined ->
+      undefined;
+    {ok, Path} ->
+      try_read_token_file(Path)
+  end.
+
+try_read_token_file(Path) ->
+  case file:open(Path, read) of
+    {ok, File} ->
+      PossibleToken = try_fread_token_file(File),
+      file:close(File),
+      PossibleToken;
+    {error, Error} ->
+      lager:warning("unable to open configured token file ~p: ~p", [Path, Error]),
+      undefined
+  end.
+
+try_fread_token_file(File) ->
+  case io:fread(File, "", "~s") of
+    {ok, [Token]} ->
+      {ok, Token};
+    Other ->
+      lager:warning("unable to parse provided token file: ~p", [Other]),
+      undefined
+  end.
+
 -spec(poll() -> {ok, mesos_agent_state()} | {error, Reason :: term()}).
 poll() ->
   Proto = proto(),
@@ -51,13 +95,7 @@ poll(URI) ->
   {ok, Hostname} = inet:gethostname(),
   UserAgent = lists:flatten(io_lib:format("Mesos-State / Host: ~s, Pid: ~s", [Hostname, os:getpid()])),
   Headers = [{"Accept", "application/json"}, {"User-Agent", UserAgent}],
-  Headers1 =
-    case application:get_env(?APP, token) of
-      undefined ->
-        Headers;
-      {ok, Value} ->
-        [{"Authorization", Value}|Headers]
-    end,
+  Headers1 = maybe_use_token(Headers),
   Response = httpc:request(get, {URI, Headers1}, Options1, [{body_format, binary}]),
   handle_response(Response).
 
