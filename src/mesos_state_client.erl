@@ -67,20 +67,19 @@ try_token_from_file() ->
 
 -spec(try_read_token_file(string()) -> {ok, string()} | undefined).
 try_read_token_file(Path) ->
-  case file:open(Path, [read]) of
-    {ok, File} ->
-      PossibleToken = try_fread_token_file(File),
-      file:close(File),
-      PossibleToken;
+  case file:read_file(Path) of
+    {ok, Binary} ->
+      try_fread_token_binary(Binary);
     {error, Error} ->
       lager:warning("unable to open configured token file ~p: ~p", [Path, Error]),
       undefined
   end.
 
--spec(try_fread_token_file(io:device()) -> {ok, string()} | undefined).
-try_fread_token_file(File) ->
-  case io:fread(File, "", "~s") of
-    {ok, [Token]} ->
+-spec(try_fread_token_binary(binary()) -> {ok, string()} | undefined).
+try_fread_token_binary(Binary) ->
+  String = binary_to_list(Binary),
+  case io_lib:fread("~s", String) of
+    {ok, [Token], _Rest} ->
       {ok, Token};
     Other ->
       lager:warning("unable to parse provided token file: ~p", [Other]),
