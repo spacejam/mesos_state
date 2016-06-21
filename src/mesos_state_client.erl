@@ -20,6 +20,7 @@
 %% API
 -export([poll/0, poll/1, parse_response/1, flags/1, pid/1, tasks/1, id/1, slaves/1, frameworks/1]).
 
+-spec(proto() -> string()).
 proto() ->
   case application:get_env(?APP, ssl, false) of
     true ->
@@ -28,6 +29,7 @@ proto() ->
       "http"
   end.
 
+-spec(maybe_enable_ssl(list()) -> list()).
 maybe_enable_ssl(Options) ->
   case application:get_env(?APP, ssl, false) of
     true ->
@@ -36,6 +38,7 @@ maybe_enable_ssl(Options) ->
       Options
   end.
 
+-spec(maybe_use_token(list()) -> list()).
 maybe_use_token(Headers) ->
   case try_token_from_file() of
     undefined ->
@@ -44,6 +47,7 @@ maybe_use_token(Headers) ->
       [{"Authorization", Token}|Headers]
   end.
 
+-spec(maybe_use_env_token(list()) -> list()).
 maybe_use_env_token(Headers) ->
   case application:get_env(?APP, token) of
     undefined ->
@@ -52,6 +56,7 @@ maybe_use_env_token(Headers) ->
       [{"Authorization", Token}|Headers]
   end.
 
+-spec(try_token_from_file() -> {ok, string()} | undefined).
 try_token_from_file() ->
   case application:get_env(?APP, ssl_token_file) of
     undefined ->
@@ -60,8 +65,9 @@ try_token_from_file() ->
       try_read_token_file(Path)
   end.
 
+-spec(try_read_token_file(string()) -> {ok, string()} | undefined).
 try_read_token_file(Path) ->
-  case file:open(Path, read) of
+  case file:open(Path, [read]) of
     {ok, File} ->
       PossibleToken = try_fread_token_file(File),
       file:close(File),
@@ -71,6 +77,7 @@ try_read_token_file(Path) ->
       undefined
   end.
 
+-spec(try_fread_token_file(io:device()) -> {ok, string()} | undefined).
 try_fread_token_file(File) ->
   case io:fread(File, "", "~s") of
     {ok, [Token]} ->
