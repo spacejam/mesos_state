@@ -40,20 +40,15 @@ maybe_enable_ssl(Options) ->
 
 -spec(maybe_use_token(list()) -> list()).
 maybe_use_token(Headers) ->
-  case try_token_from_file() of
-    undefined ->
-      maybe_use_env_token(Headers);
-    {ok, Token} ->
-      [{"Authorization", Token}|Headers]
-  end.
-
--spec(maybe_use_env_token(list()) -> list()).
-maybe_use_env_token(Headers) ->
-  case application:get_env(?APP, token) of
-    undefined ->
-      Headers;
-    {ok, Token} ->
-      [{"Authorization", Token}|Headers]
+  FileToken = try_token_from_file(),
+  EnvToken = application:get_env(?APP, token),
+  case {FileToken, EnvToken} of
+    {{ok, Token}, _} ->
+      [{"Authorization", Token}|Headers];
+    {_, {ok, Token}} ->
+      [{"Authorization", Token}|Headers];
+    _ ->
+      Headers
   end.
 
 -spec(try_token_from_file() -> {ok, string()} | undefined).
