@@ -11,6 +11,7 @@
 
 -include("mesos_state.hrl").
 -include("mesos_state_internal.hrl").
+-define(WHITESPACE, [<<" ">>, <<"\n">>, <<"\t">>, <<"\r">>]).
 -opaque mesos_agent_state() :: map().
 
 
@@ -72,10 +73,7 @@ try_read_token_file(Path) ->
 
 -spec(strip_token_binary(binary()) -> string()).
 strip_token_binary(Binary) ->
-  Stripped = binary:replace(Binary,
-                            [<<" ">>, <<"\n">>, <<"\t">>, <<"\r">>],
-                            <<>>,
-                            [global]),
+  Stripped = binary:replace(Binary, ?WHITESPACE, <<>>, [global]),
   binary_to_list(Stripped).
 
 -spec(poll() -> {ok, mesos_agent_state()} | {error, Reason :: term()}).
