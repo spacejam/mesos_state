@@ -64,22 +64,19 @@ try_token_from_file() ->
 try_read_token_file(Path) ->
   case file:read_file(Path) of
     {ok, Binary} ->
-      try_fread_token_binary(Binary);
+      {ok, strip_token_binary(Binary)};
     {error, Error} ->
       lager:warning("unable to open configured token file ~p: ~p", [Path, Error]),
       undefined
   end.
 
--spec(try_fread_token_binary(binary()) -> {ok, string()} | undefined).
-try_fread_token_binary(Binary) ->
-  String = binary_to_list(Binary),
-  case io_lib:fread("~s", String) of
-    {ok, [Token], _Rest} ->
-      {ok, Token};
-    Other ->
-      lager:warning("unable to parse provided token file: ~p", [Other]),
-      undefined
-  end.
+-spec(strip_token_binary(binary()) -> string()).
+strip_token_binary(Binary) ->
+  Stripped = binary:replace(Binary,
+                            [<<" ">>, <<"\n">>, <<"\t">>, <<"\r">>],
+                            <<>>,
+                            [global]),
+  binary_to_list(Stripped).
 
 -spec(poll() -> {ok, mesos_agent_state()} | {error, Reason :: term()}).
 poll() ->
